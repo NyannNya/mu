@@ -8,12 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateBtn.addEventListener('click', () => {
         const participants = parseInt(document.getElementById('participants').value) || 20000;
         const ticketsPerPerson = parseInt(document.getElementById('tickets').value) || 10;
+        const strategyMode = document.getElementById('strategy-mode').value;
         const lastWinner = parseInt(document.getElementById('last-winner').value) || null;
 
-        calculateStrategy(participants, ticketsPerPerson, lastWinner);
+        calculateStrategy(participants, ticketsPerPerson, strategyMode, lastWinner);
     });
 
-    function calculateStrategy(participants, ticketsPerPerson, lastWinner) {
+    function calculateStrategy(participants, ticketsPerPerson, strategyMode, lastWinner) {
         // Visual Feedback
         calculateBtn.innerHTML = '<span>計算中...</span>';
         calculateBtn.disabled = true;
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Use setTimeout to allow UI to update before heavy calculation
         setTimeout(() => {
-            const recommendations = runSimulation(participants, ticketsPerPerson, lastWinner);
+            const recommendations = runSimulation(participants, ticketsPerPerson, strategyMode, lastWinner);
             displayResults(recommendations, participants * ticketsPerPerson);
 
             calculateBtn.innerHTML = '<span>計算推薦號碼</span>';
@@ -29,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     }
 
-    function runSimulation(participants, ticketsPerPerson, lastWinner) {
+    function runSimulation(participants, ticketsPerPerson, strategyMode, lastWinner) {
         // Account for realistic participation - not everyone uses all tickets
         const actualTickets = estimateActualTickets(participants, ticketsPerPerson);
         const playerModel = simulatePlayerDistribution(actualTickets);
@@ -44,58 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
             candidates.push(base + 13);
 
             // Add some calculated ones
-            const calculated = getColdStartRecommendations(actualTickets, playerModel);
+            const calculated = getColdStartRecommendations(actualTickets, playerModel, strategyMode);
             candidates = candidates.concat(calculated.slice(0, 7));
         } else {
-            // Balanced Risk/Reward Strategy
-            candidates = getColdStartRecommendations(actualTickets, playerModel);
+            // Strategy-based recommendations
+            candidates = getColdStartRecommendations(actualTickets, playerModel, strategyMode);
         }
-
-        // Sort and deduplicate
-        candidates = [...new Set(candidates)].sort((a, b) => a - b).slice(0, 10);
-        return candidates;
-    }
-
-    function getColdStartRecommendations(totalTickets, playerModel) {
-        // Balanced Risk/Reward Strategy
-        // Mix of aggressive, moderate, and safe picks to maximize win probability
-
-        const recommendations = [];
-
-        const safeStart = estimateSafeZoneStart(totalTickets, playerModel);
-
-        // === TIER 1: 高風險高回報 (3 picks) ===
-        // Lower numbers with collision risk but huge upside if unique
-        // Range: 15%-35% of safe zone start
-        const aggressiveMin = Math.floor(safeStart * 0.15);
-        const aggressiveMax = Math.floor(safeStart * 0.35);
-
-        recommendations.push(randomInt(aggressiveMin, aggressiveMin + 3000));
-        recommendations.push(randomInt(aggressiveMin + 5000, aggressiveMin + 8000));
-        recommendations.push(randomInt(aggressiveMax - 5000, aggressiveMax));
-
-        // === TIER 2: 中等風險 (3 picks) ===
-        // Medium range - balance between risk and safety
-        // Range: 50%-65% of safe zone start
-        const mediumMin = Math.floor(safeStart * 0.5);
-        const mediumMax = Math.floor(safeStart * 0.65);
-
-        recommendations.push(randomInt(mediumMin, mediumMin + 3000));
-        recommendations.push(randomInt(mediumMin + 4000, mediumMin + 7000));
-        recommendations.push(randomInt(mediumMax - 3000, mediumMax));
-
-        // === TIER 3: 安全保守 (4 picks) ===
-        // Safe zone - cluster at the start for "smallest unique"
-        recommendations.push(randomInt(safeStart, safeStart + 2500));
-        recommendations.push(randomInt(safeStart + 2500, safeStart + 5000));
-        recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
-        recommendations.push(randomInt(safeStart + 15000, safeStart + 25000));
-
-        return recommendations;
-    }
-
-    function estimateActualTickets(participants, ticketsPerPerson) {
-        // High participation cost means not everyone uses all tickets
         // Estimate: 50% average usage
         const participationRate = 0.5;
         return Math.floor(participants * ticketsPerPerson * participationRate);
