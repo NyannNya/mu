@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const calculate Btn = document.getElementById('calculate-btn');
+    const calculateBtn = document.getElementById('calculate-btn');
     const resultsArea = document.getElementById('results-area');
     const numbersGrid = document.getElementById('numbers-grid');
     const totalTicketsDisplay = document.getElementById('total-tickets');
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function calculateStrategy(participants, ticketsPerPerson, strategyMode, lastWinner) {
-        calculate Btn.innerHTML = '<span>計算中...</span>';
+        calculateBtn.innerHTML = '<span>計算中...</span>';
         calculateBtn.disabled = true;
         resultsArea.classList.add('hidden');
 
