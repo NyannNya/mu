@@ -50,10 +50,70 @@ document.addEventListener('DOMContentLoaded', () => {
         return candidates;
     }
 
-    return Math.floor(participants * ticketsPerPerson * participationRate);
-}
+    function getColdStartRecommendations(totalTickets, playerModel, strategyMode) {
+        const recommendations = [];
+        const safeStart = estimateSafeZoneStart(totalTickets, playerModel);
 
-        function simulatePlayerDistribution(totalTickets) {
+        if (strategyMode === 'conservative') {
+            // 保守策略：全部集中在安全區
+            for (let i = 0; i < 10; i++) {
+                const min = safeStart + (i * 3000);
+                const max = min + 3000;
+                recommendations.push(randomInt(min, max));
+            }
+
+        } else if (strategyMode === 'aggressive') {
+            // 激進策略：重押低數字
+            const aggressiveMin = Math.max(1, Math.floor(safeStart * 0.10));
+            const aggressiveMax = Math.max(1, Math.floor(safeStart * 0.40));
+
+            for (let i = 0; i < 5; i++) {
+                const min = Math.max(1, aggressiveMin + (i * 5000));
+                const max = min + 4000;
+                recommendations.push(randomInt(min, max));
+            }
+
+            const mediumMin = Math.max(1, Math.floor(safeStart * 0.45));
+            const mediumMax = Math.max(1, Math.floor(safeStart * 0.65));
+
+            recommendations.push(randomInt(mediumMin, mediumMin + 4000));
+            recommendations.push(randomInt(mediumMin + 5000, mediumMin + 9000));
+            recommendations.push(randomInt(mediumMax - 4000, mediumMax));
+
+            recommendations.push(randomInt(safeStart, safeStart + 5000));
+            recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
+
+        } else {
+            // 平衡策略 (default)
+            const aggressiveMin = Math.max(1, Math.floor(safeStart * 0.15));
+            const aggressiveMax = Math.max(1, Math.floor(safeStart * 0.35));
+
+            recommendations.push(randomInt(aggressiveMin, aggressiveMin + 3000));
+            recommendations.push(randomInt(aggressiveMin + 5000, aggressiveMin + 8000));
+            recommendations.push(randomInt(aggressiveMax - 5000, aggressiveMax));
+
+            const mediumMin = Math.max(1, Math.floor(safeStart * 0.5));
+            const mediumMax = Math.max(1, Math.floor(safeStart * 0.65));
+
+            recommendations.push(randomInt(mediumMin, mediumMin + 3000));
+            recommendations.push(randomInt(mediumMin + 4000, mediumMin + 7000));
+            recommendations.push(randomInt(mediumMax - 3000, mediumMax));
+
+            recommendations.push(randomInt(safeStart, safeStart + 2500));
+            recommendations.push(randomInt(safeStart + 2500, safeStart + 5000));
+            recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
+            recommendations.push(randomInt(safeStart + 15000, safeStart + 25000));
+        }
+
+        return recommendations;
+    }
+
+    function estimateActualTickets(participants, ticketsPerPerson) {
+        const participationRate = 0.5;
+        return Math.floor(participants * ticketsPerPerson * participationRate);
+    }
+
+    function simulatePlayerDistribution(totalTickets) {
         return {
             casualWeight: 0.4,
             strategicWeight: 0.3,
@@ -61,26 +121,67 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function estimateSafeZoneStart(totalTickets, playerModel) {
+        const safeThreshold = Math.floor(totalTickets * 0.7);
+        return safeThreshold;
+    }
+
+    function randomInt(min, max) {
+        // Ensure min is at least 1 (lottery numbers start from 1)
+        min = Math.max(1, Math.floor(min));
+        max = Math.max(1, Math.floor(max));
+
+        // Ensure min <= max
+        if (min > max) {
+            [min, max] = [max, min];
+        }
+
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function displayResults(numbers, maxTickets) {
+        resultsArea.classList.remove('hidden');
+        numbersGrid.innerHTML = '';
+
         const actualTickets = Math.floor(maxTickets * 0.5);
-const safeStart = Math.floor(actualTickets * 0.7);
+        const safeStart = Math.floor(actualTickets * 0.7);
 
-const aggressiveMax = Math.floor(safeStart * 0.35);
-const mediumMax = Math.floor(safeStart * 0.65);
+        const aggressiveMax = Math.floor(safeStart * 0.35);
+        const mediumMax = Math.floor(safeStart * 0.65);
 
-numbers.forEach((num, index) => {
-    const div = document.createElement('div');
-    div.className = 'number-badge';
-    div.style.animationDelay = `${index * 0.05}s`;
-    div.textContent = num.toLocaleString();
+        numbers.forEach((num, index) => {
+            const div = document.createElement('div');
+            div.className = 'number-badge';
+            div.style.animationDelay = `${index * 0.05}s`;
+            div.textContent = num.toLocaleString();
 
-    if (num >= safeStart) {
-        div.style.borderColor = '#4caf50';
-        div.style.color = '#4caf50';
-    } else if (num >= mediumMax) {
-        div.style.borderColor = '#FFD23F';
-        div.style.color = '#FFD23F';
-    } else {
-        div.style.borderColor = '#ff4d4d';
+            if (num >= safeStart) {
+                div.style.borderColor = '#4caf50';
+                div.style.color = '#4caf50';
+            } else if (num >= mediumMax) {
+                div.style.borderColor = '#FFD23F';
+                div.style.color = '#FFD23F';
+            } else {
+                div.style.borderColor = '#ff4d4d';
+                div.style.color = '#ff4d4d';
+            }
+
+            numbersGrid.appendChild(div);
+        });
+
+        totalTicketsDisplay.textContent = actualTickets.toLocaleString();
+
+        const aggressiveMin = Math.max(1, Math.floor(safeStart * 0.15));
+        const safeEnd = safeStart + 25000;
+        safeZoneDisplay.textContent = `${aggressiveMin.toLocaleString()} - ${safeEnd.toLocaleString()}`;
+
+        renderDensityChart(actualTickets);
+    }
+
+    function renderDensityChart(totalTickets) {
+        const chartContainer = document.getElementById('density-chart');
+        chartContainer.innerHTML = '';
+        chartContainer.style.display = 'flex';
         chartContainer.style.alignItems = 'flex-end';
         chartContainer.style.height = '120px';
         chartContainer.style.gap = '2px';
