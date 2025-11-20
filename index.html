@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapleStory N - Lucky Choice Strategy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="bg-animation"></div>
+
+    <main class="container">
+        <header class="header">
+            <div class="logo-container">
+                <h1>🍁 Lucky Choice Strategy</h1>
+                <p class="subtitle">MapleStory N Event Helper</p>
+            </div>
+        </header>
+
+        <div class="card glass-panel">
+            <div class="input-group">
+                <label for="participants">
+                    <span class="icon">👥</span> 預估活躍玩家 (Participants)
+                </label>
+                <input type="number" id="participants" value="60000" min="1000">
+                <p class="hint">預設 60,000 人</p>
+            </div>
+
+            <div class="input-group">
+                <label for="tickets">
+                    <span class="icon">🎟️</span> 每人票數 (Tickets)
+                </label>
+                <input type="number" id="tickets" value="10" min="1" max="30">
+            </div>
+
+            <div class="input-group">
+                <label for="strategy-mode">
+                    <span class="icon">🧠</span> 策略模式 (Mode)
+                </label>
+                <select id="strategy-mode">
+                    <option value="cold">❄️ 冷啟動 (無歷史數據)</option>
+                    <option value="history">📜 歷史分析 (輸入前次號碼)</option>
+                </select>
+            </div>
+
+            <div id="history-input-container" class="hidden">
+                <div class="input-group">
+                    <label for="last-winner">
+                        <span class="icon">🏆</span> 上一輪獲勝號碼
+                    </label>
+                    <input type="number" id="last-winner" placeholder="例如: 12345">
+                </div>
+            </div>
+
+            <button id="calculate-btn" class="btn-primary">
+                <span>計算推薦號碼</span>
+                <div class="btn-effect"></div>
+            </button>
+        </div>
+
+        <div id="results-area" class="results-container hidden">
+            <div class="card glass-panel result-card">
+                <h2>🎲 推薦號碼 (Top 10)</h2>
+                <p class="disclaimer">基於蒙地卡羅模擬 (Monte Carlo Simulation)</p>
+                <div id="numbers-grid" class="numbers-grid">
+                    <!-- Numbers will be injected here -->
+                </div>
+            </div>
+
+            <div class="card glass-panel stats-card">
+                <h3>📊 分析數據</h3>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span class="label">總票數預估</span>
+                        <span class="value" id="total-tickets">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">預估安全區間</span>
+                        <span class="value" id="safe-zone">0 - 0</span>
+                    </div>
+                </div>
+                <div class="chart-placeholder" id="density-chart">
+                    <!-- Simple CSS bar chart or text visualization -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
