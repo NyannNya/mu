@@ -5,8 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalTicketsDisplay = document.getElementById('total-tickets');
     const safeZoneDisplay = document.getElementById('safe-zone');
 
-
-
     calculateBtn.addEventListener('click', () => {
         const participants = parseInt(document.getElementById('participants').value) || 20000;
         const ticketsPerPerson = parseInt(document.getElementById('tickets').value) || 10;
@@ -49,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const calculated = getColdStartRecommendations(actualTickets, playerModel);
             candidates = candidates.concat(calculated.slice(0, 7));
         } else {
-            // Practical Strategy
+            // Balanced Risk/Reward Strategy
             candidates = getColdStartRecommendations(actualTickets, playerModel);
         }
 
@@ -59,34 +57,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getColdStartRecommendations(totalTickets, playerModel) {
-        // Practical Strategy Based on Realistic Analysis
-        // Avoid very low numbers (<1000) due to extremely high collision probability
+        // Balanced Risk/Reward Strategy
+        // Mix of aggressive, moderate, and safe picks to maximize win probability
 
         const recommendations = [];
 
-        // Calculate safe zone where collision probability is low
         const safeStart = estimateSafeZoneStart(totalTickets, playerModel);
-        const safeEnd = safeStart + 30000;
 
-        // Strategy: Focus on safe zone start (smallest unique number)
-        // Distribute 10 numbers in a strategic range
+        // === TIER 1: 高風險高回報 (3 picks) ===
+        // Lower numbers with collision risk but huge upside if unique
+        // Range: 15%-35% of safe zone start
+        const aggressiveMin = Math.floor(safeStart * 0.15);
+        const aggressiveMax = Math.floor(safeStart * 0.35);
 
-        // 1. Early safe zone (highest priority - smallest unique numbers)
-        for (let i = 0; i < 6; i++) {
-            const min = safeStart + (i * 2500);
-            const max = min + 2500;
-            recommendations.push(randomInt(min, max));
-        }
+        recommendations.push(randomInt(aggressiveMin, aggressiveMin + 3000));
+        recommendations.push(randomInt(aggressiveMin + 5000, aggressiveMin + 8000));
+        recommendations.push(randomInt(aggressiveMax - 5000, aggressiveMax));
 
-        // 2. Mid safe zone (backup picks)
-        for (let i = 0; i < 3; i++) {
-            const min = safeStart + 15000 + (i * 3000);
-            const max = min + 3000;
-            recommendations.push(randomInt(min, max));
-        }
+        // === TIER 2: 中等風險 (3 picks) ===
+        // Medium range - balance between risk and safety
+        // Range: 50%-65% of safe zone start
+        const mediumMin = Math.floor(safeStart * 0.5);
+        const mediumMax = Math.floor(safeStart * 0.65);
 
-        // 3. One extra backup slightly higher
-        recommendations.push(randomInt(safeStart + 25000, safeStart + 30000));
+        recommendations.push(randomInt(mediumMin, mediumMin + 3000));
+        recommendations.push(randomInt(mediumMin + 4000, mediumMin + 7000));
+        recommendations.push(randomInt(mediumMax - 3000, mediumMax));
+
+        // === TIER 3: 安全保守 (4 picks) ===
+        // Safe zone - cluster at the start for "smallest unique"
+        recommendations.push(randomInt(safeStart, safeStart + 2500));
+        recommendations.push(randomInt(safeStart + 2500, safeStart + 5000));
+        recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
+        recommendations.push(randomInt(safeStart + 15000, safeStart + 25000));
 
         return recommendations;
     }
@@ -110,17 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function estimateSafeZoneStart(totalTickets, playerModel) {
         // Calculate where expected collisions drop below 1
         // Most players (especially casual 40%) cluster heavily in 1-10000 range
-        // With 40% casual picking from 1-1000, collision rate is extremely high there
 
-        // Safe zone calculation:
-        // - totalTickets * casualWeight = casual player tickets
-        // - These are distributed over ~1000-5000 range
-        // - Beyond casualPeak * 10, density drops significantly
-
-        const casualTickets = totalTickets * playerModel.casualWeight;
-        const casualPeak = 5000; // Most casual players pick under 5000
-
-        // Safe when expected picks < 0.3 (very low collision)
         // Safe zone starts around totalTickets * 0.7 for realistic modeling
         const safeThreshold = Math.floor(totalTickets * 0.7);
 
@@ -135,9 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsArea.classList.remove('hidden');
         numbersGrid.innerHTML = '';
 
-        // Calculate safe zone for consistency with recommendations
+        // Calculate zones for risk tier classification
         const actualTickets = Math.floor(maxTickets * 0.5);
         const safeStart = Math.floor(actualTickets * 0.7);
+
+        const aggressiveMax = Math.floor(safeStart * 0.35);
+        const mediumMax = Math.floor(safeStart * 0.65);
 
         numbers.forEach((num, index) => {
             const div = document.createElement('div');
@@ -145,15 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.animationDelay = `${index * 0.05}s`;
             div.textContent = num.toLocaleString();
 
-            // Visual hint aligned with safe zone calculation
+            // Risk tier color coding
             if (num >= safeStart) {
-                div.style.borderColor = '#4caf50'; // Safe Green
+                // Safe tier (green)
+                div.style.borderColor = '#4caf50';
                 div.style.color = '#4caf50';
-            } else if (num >= safeStart * 0.7) {
-                div.style.borderColor = '#FFD23F'; // Warning Yellow
+            } else if (num >= mediumMax) {
+                // Medium risk tier (yellow)
+                div.style.borderColor = '#FFD23F';
                 div.style.color = '#FFD23F';
             } else {
-                div.style.borderColor = '#ff4d4d'; // Danger Red
+                // Aggressive tier (red)
+                div.style.borderColor = '#ff4d4d';
                 div.style.color = '#ff4d4d';
             }
 
@@ -162,9 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         totalTicketsDisplay.textContent = actualTickets.toLocaleString();
 
-        // Display safe zone range that matches recommendations
-        const safeEnd = safeStart + 30000;
-        safeZoneDisplay.textContent = `${safeStart.toLocaleString()} - ${safeEnd.toLocaleString()}`;
+        // Display recommendation range (from aggressive to safe upper bound)
+        const aggressiveMin = Math.floor(safeStart * 0.15);
+        const safeEnd = safeStart + 25000;
+        safeZoneDisplay.textContent = `${aggressiveMin.toLocaleString()} - ${safeEnd.toLocaleString()}`;
 
         // Visualization
         renderDensityChart(actualTickets);
@@ -194,12 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
             bar.style.width = '100%';
             bar.style.height = `${height}%`;
 
-            // Color gradient: Red (Danger) -> Yellow -> Green (Safe)
-            // Safe zone starts at 70% of range
-            if (i < bars * 0.5) {
-                bar.style.backgroundColor = '#ff4d4d'; // Danger
-            } else if (i < bars * 0.7) {
-                bar.style.backgroundColor = '#FFD23F'; // Warning
+            // Color gradient: Red (Aggressive) -> Yellow (Medium) -> Green (Safe)
+            if (i < bars * 0.35) {
+                bar.style.backgroundColor = '#ff4d4d'; // Aggressive
+            } else if (i < bars * 0.65) {
+                bar.style.backgroundColor = '#FFD23F'; // Medium
             } else {
                 bar.style.backgroundColor = '#4caf50'; // Safe
             }
@@ -212,15 +211,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Labels
         const startLabel = document.createElement('div');
-        startLabel.textContent = '0';
+        startLabel.textContent = '高風險';
         startLabel.style.position = 'absolute';
         startLabel.style.bottom = '0';
         startLabel.style.left = '0';
         startLabel.style.fontSize = '0.7rem';
-        startLabel.style.color = '#a0a0a0';
+        startLabel.style.color = '#ff4d4d';
 
         const endLabel = document.createElement('div');
-        endLabel.textContent = 'High (Safe)';
+        endLabel.textContent = '安全區';
         endLabel.style.position = 'absolute';
         endLabel.style.bottom = '0';
         endLabel.style.right = '0';
@@ -233,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         midLabel.style.top = '0';
         midLabel.style.left = '5px';
         midLabel.style.fontSize = '0.7rem';
-        midLabel.style.color = '#ff4d4d';
+        midLabel.style.color = '#666';
 
         chartContainer.style.position = 'relative';
         chartContainer.appendChild(startLabel);
