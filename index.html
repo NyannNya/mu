@@ -41,22 +41,11 @@
             </div>
 
             <div class="input-group">
-                <label for="strategy-mode">
-                    <span class="icon">🧠</span> 策略模式 (Mode)
+                <label for="last-winner">
+                    <span class="icon">🏆</span> 上一輪獲勝號碼 (選填)
                 </label>
-                <select id="strategy-mode">
-                    <option value="cold">❄️ 冷啟動 (無歷史數據)</option>
-                    <option value="history">📜 歷史分析 (輸入前次號碼)</option>
-                </select>
-            </div>
-
-            <div id="history-input-container" class="hidden">
-                <div class="input-group">
-                    <label for="last-winner">
-                        <span class="icon">🏆</span> 上一輪獲勝號碼
-                    </label>
-                    <input type="number" id="last-winner" placeholder="例如: 12345">
-                </div>
+                <input type="number" id="last-winner" placeholder="不需要則留空<">
+                <p class="hint">輸入上次獲勝號碼可優化建議</p>
             </div>
 
             <button id="calculate-btn" class="btn-primary">
@@ -68,22 +57,22 @@
         <div id="results-area" class="results-container hidden">
             <div class="card glass-panel result-card">
                 <h2>🎲 推薦號碼 (Top 10)</h2>
-                <p class="disclaimer">基於蒙地卡羅模擬 (Monte Carlo Simulation)</p>
+                <p class="disclaimer">基於演算法分析產生</p>
                 <div id="numbers-grid" class="numbers-grid">
                     <!-- Numbers will be injected here -->
                 </div>
             </div>
 
             <div class="card glass-panel stats-card">
-                <h3>📊 分析數據</h3>
+                <h3>📊 參考數據</h3>
                 <div class="stats-row">
                     <div class="stat-item">
-                        <span class="label">總票數預估</span>
+                        <span class="label">估計有效票數</span>
                         <span class="value" id="total-tickets">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="label">預估安全區間</span>
-                        <span class="value" id="safe-zone">0 - 0</span>
+                        <span class="label">號碼分布趨勢</span>
+                        <span class="value" id="safe-zone">分析中</span>
                     </div>
                 </div>
                 <div class="chart-placeholder" id="density-chart">
