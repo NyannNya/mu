@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const calculateBtn = document.getElementById('calculate-btn');
+    const calculate Btn = document.getElementById('calculate-btn');
     const resultsArea = document.getElementById('results-area');
     const numbersGrid = document.getElementById('numbers-grid');
     const totalTicketsDisplay = document.getElementById('total-tickets');
@@ -15,12 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function calculateStrategy(participants, ticketsPerPerson, strategyMode, lastWinner) {
-        // Visual Feedback
-        calculateBtn.innerHTML = '<span>計算中...</span>';
+        calculate Btn.innerHTML = '<span>計算中...</span>';
         calculateBtn.disabled = true;
         resultsArea.classList.add('hidden');
 
-        // Use setTimeout to allow UI to update before heavy calculation
         setTimeout(() => {
             const recommendations = runSimulation(participants, ticketsPerPerson, strategyMode, lastWinner);
             displayResults(recommendations, participants * ticketsPerPerson);
@@ -31,47 +29,100 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function runSimulation(participants, ticketsPerPerson, strategyMode, lastWinner) {
-        // Account for realistic participation - not everyone uses all tickets
         const actualTickets = estimateActualTickets(participants, ticketsPerPerson);
         const playerModel = simulatePlayerDistribution(actualTickets);
 
         let candidates = [];
 
         if (lastWinner) {
-            // Adaptive Strategy - use historical data
             const base = lastWinner;
             candidates.push(base + 1);
             candidates.push(base + 7);
             candidates.push(base + 13);
 
-            // Add some calculated ones
             const calculated = getColdStartRecommendations(actualTickets, playerModel, strategyMode);
             candidates = candidates.concat(calculated.slice(0, 7));
         } else {
-            // Strategy-based recommendations
             candidates = getColdStartRecommendations(actualTickets, playerModel, strategyMode);
         }
-        // Estimate: 50% average usage
+
+        candidates = [...new Set(candidates)].sort((a, b) => a - b).slice(0, 10);
+        return candidates;
+    }
+
+    function getColdStartRecommendations(totalTickets, playerModel, strategyMode) {
+        const recommendations = [];
+        const safeStart = estimateSafeZoneStart(totalTickets, playerModel);
+
+        if (strategyMode === 'conservative') {
+            // 保守策略：全部集中在安全區
+            for (let i = 0; i < 10; i++) {
+                const min = safeStart + (i * 3000);
+                const max = min + 3000;
+                recommendations.push(randomInt(min, max));
+            }
+
+        } else if (strategyMode === 'aggressive') {
+            // 激進策略：重押低數字
+            const aggressiveMin = Math.floor(safeStart * 0.10);
+            const aggressiveMax = Math.floor(safeStart * 0.40);
+
+            for (let i = 0; i < 5; i++) {
+                const min = aggressiveMin + (i * 5000);
+                const max = min + 4000;
+                recommendations.push(randomInt(min, max));
+            }
+
+            const mediumMin = Math.floor(safeStart * 0.45);
+            const mediumMax = Math.floor(safeStart * 0.65);
+
+            recommendations.push(randomInt(mediumMin, mediumMin + 4000));
+            recommendations.push(randomInt(mediumMin + 5000, mediumMin + 9000));
+            recommendations.push(randomInt(mediumMax - 4000, mediumMax));
+
+            recommendations.push(randomInt(safeStart, safeStart + 5000));
+            recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
+
+        } else {
+            // 平衡策略 (default)
+            const aggressiveMin = Math.floor(safeStart * 0.15);
+            const aggressiveMax = Math.floor(safeStart * 0.35);
+
+            recommendations.push(randomInt(aggressiveMin, aggressiveMin + 3000));
+            recommendations.push(randomInt(aggressiveMin + 5000, aggressiveMin + 8000));
+            recommendations.push(randomInt(aggressiveMax - 5000, aggressiveMax));
+
+            const mediumMin = Math.floor(safeStart * 0.5);
+            const mediumMax = Math.floor(safeStart * 0.65);
+
+            recommendations.push(randomInt(mediumMin, mediumMin + 3000));
+            recommendations.push(randomInt(mediumMin + 4000, mediumMin + 7000));
+            recommendations.push(randomInt(mediumMax - 3000, mediumMax));
+
+            recommendations.push(randomInt(safeStart, safeStart + 2500));
+            recommendations.push(randomInt(safeStart + 2500, safeStart + 5000));
+            recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
+            recommendations.push(randomInt(safeStart + 15000, safeStart + 25000));
+        }
+
+        return recommendations;
+    }
+
+    function estimateActualTickets(participants, ticketsPerPerson) {
         const participationRate = 0.5;
         return Math.floor(participants * ticketsPerPerson * participationRate);
     }
 
     function simulatePlayerDistribution(totalTickets) {
-        // Model different player behavior types
         return {
-            casualWeight: 0.4,      // 40% pick small numbers (1-5000)
-            strategicWeight: 0.3,   // 30% use mixed strategy
-            advancedWeight: 0.3     // 30% use game theory
+            casualWeight: 0.4,
+            strategicWeight: 0.3,
+            advancedWeight: 0.3
         };
     }
 
     function estimateSafeZoneStart(totalTickets, playerModel) {
-        // Calculate where expected collisions drop below 1
-        // Most players (especially casual 40%) cluster heavily in 1-10000 range
-
-        // Safe zone starts around totalTickets * 0.7 for realistic modeling
         const safeThreshold = Math.floor(totalTickets * 0.7);
-
         return safeThreshold;
     }
 
@@ -83,7 +134,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsArea.classList.remove('hidden');
         numbersGrid.innerHTML = '';
 
-        // Calculate zones for risk tier classification
         const actualTickets = Math.floor(maxTickets * 0.5);
         const safeStart = Math.floor(actualTickets * 0.7);
 
@@ -96,17 +146,13 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.animationDelay = `${index * 0.05}s`;
             div.textContent = num.toLocaleString();
 
-            // Risk tier color coding
             if (num >= safeStart) {
-                // Safe tier (green)
                 div.style.borderColor = '#4caf50';
                 div.style.color = '#4caf50';
             } else if (num >= mediumMax) {
-                // Medium risk tier (yellow)
                 div.style.borderColor = '#FFD23F';
                 div.style.color = '#FFD23F';
             } else {
-                // Aggressive tier (red)
                 div.style.borderColor = '#ff4d4d';
                 div.style.color = '#ff4d4d';
             }
@@ -116,12 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         totalTicketsDisplay.textContent = actualTickets.toLocaleString();
 
-        // Display recommendation range (from aggressive to safe upper bound)
         const aggressiveMin = Math.floor(safeStart * 0.15);
         const safeEnd = safeStart + 25000;
         safeZoneDisplay.textContent = `${aggressiveMin.toLocaleString()} - ${safeEnd.toLocaleString()}`;
 
-        // Visualization
         renderDensityChart(actualTickets);
     }
 
@@ -135,27 +179,24 @@ document.addEventListener('DOMContentLoaded', () => {
         chartContainer.style.marginTop = '1rem';
         chartContainer.style.paddingBottom = '20px';
 
-        // Create bars to represent density
         const bars = 40;
         for (let i = 0; i < bars; i++) {
             const bar = document.createElement('div');
 
-            // Logic: High density at start, rapid drop, then long flat tail
             const x = i / bars;
-            let density = Math.pow(1 - x, 4); // Steep decay
+            let density = Math.pow(1 - x, 4);
 
             const height = Math.max(2, density * 100);
 
             bar.style.width = '100%';
             bar.style.height = `${height}%`;
 
-            // Color gradient: Red (Aggressive) -> Yellow (Medium) -> Green (Safe)
             if (i < bars * 0.35) {
-                bar.style.backgroundColor = '#ff4d4d'; // Aggressive
+                bar.style.backgroundColor = '#ff4d4d';
             } else if (i < bars * 0.65) {
-                bar.style.backgroundColor = '#FFD23F'; // Medium
+                bar.style.backgroundColor = '#FFD23F';
             } else {
-                bar.style.backgroundColor = '#4caf50'; // Safe
+                bar.style.backgroundColor = '#4caf50';
             }
 
             bar.style.borderRadius = '2px 2px 0 0';
@@ -164,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
             chartContainer.appendChild(bar);
         }
 
-        // Labels
         const startLabel = document.createElement('div');
         startLabel.textContent = '高風險';
         startLabel.style.position = 'absolute';
