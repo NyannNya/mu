@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function runMonteCarloSimulation(strategyMode, winnerCount, lastWinner) {
-        // 步驟1：確定搜索範圍
         let searchMin, searchMax;
         if (lastWinner) {
             searchMin = Math.max(1, Math.floor(lastWinner * 0.6));
@@ -38,23 +37,19 @@ document.addEventListener('DOMContentLoaded', () => {
             searchMax = winnerCount === 30 ? 400 : 200;
         }
 
-        // 步驟2：蒙特卡羅模擬 - 模擬其他玩家的選擇行為
         const popularityScore = simulatePlayerBehavior(searchMin, searchMax, 5000);
 
-        // 步驟3：計算每個數字的"唯一性分數"
         const uniquenessScores = [];
         for (let num = searchMin; num <= searchMax; num++) {
             const hotPenalty = calculateHotNumberPenalty(num);
             const randomness = calculateRandomness(num);
             const popularity = popularityScore[num] || 0;
 
-            // 綜合評分 = 低被選率 + 高隨機性 - 熱門懲罰
             const score = (1 / (popularity + 1)) * 1000 + randomness - hotPenalty;
 
             uniquenessScores.push({ num, score, popularity, randomness, hotPenalty });
         }
 
-        // 步驟4：根據策略選擇數字
         uniquenessScores.sort((a, b) => b.score - a.score);
 
         let recommendations = [];
@@ -74,12 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function simulatePlayerBehavior(min, max, iterations) {
         const choices = {};
 
-        // 模擬不同類型的玩家
         for (let i = 0; i < iterations; i++) {
             const playerType = Math.random();
 
             if (playerType < 0.12) {
-                // 12% 包牌玩家 - 選連續區間
                 const rangeSize = Math.floor(Math.random() * 15) + 5;
                 const startNum = Math.floor(Math.random() * (max - min - rangeSize)) + min;
                 for (let j = 0; j < rangeSize; j++) {
@@ -89,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } else if (playerType < 0.20) {
-                // 8% 阶梯式包牌
                 const step = Math.floor(Math.random() * 10) + 5;
                 const baseNum = Math.floor(Math.random() * (max - min) / 2) + min;
                 for (let j = 0; j < 10; j++) {
@@ -99,22 +91,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } else if (playerType < 0.35) {
-                // 15% 選整百、整十
                 const base = Math.floor(Math.random() * ((max - min) / 100 + 1)) * 100;
                 const num = Math.min(max, min + base);
                 choices[num] = (choices[num] || 0) + 1;
             } else if (playerType < 0.45) {
-                // 10% 選順子或重複數字
                 const num = Math.random() < 0.5 ?
                     generateSequenceNumber(min, max) :
                     generateRepeatNumber(min, max);
                 choices[num] = (choices[num] || 0) + 1;
             } else if (playerType < 0.55) {
-                // 10% 選吉利數
                 const num = generateLuckyNumber(min, max);
                 choices[num] = (choices[num] || 0) + 1;
             } else {
-                // 45% 隨機選擇（但偏向小數字）
                 const skew = Math.pow(Math.random(), 1.3);
                 const num = Math.floor(min + (max - min) * skew);
                 choices[num] = (choices[num] || 0) + 1;
@@ -235,8 +223,57 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsArea.classList.remove('hidden');
         numbersGrid.innerHTML = '';
 
-        // 估算參與人數
         let estimatedPlayers = '';
+        if (lastWinner) {
+            const avgDensity = 2.5;
+            const avgTicketsPerPerson = 6;
+            const totalTickets = lastWinner * avgDensity;
+            const players = Math.floor(totalTickets / avgTicketsPerPerson);
+            estimatedPlayers = ` | 約${Math.floor(players / 100) * 100}人參與`;
+        }
+
+        const strategyDesc = `智能分析${estimatedPlayers}`;
+
+        let lowThreshold, mediumThreshold;
+        if (lastWinner) {
+            lowThreshold = lastWinner * 0.95;
+            mediumThreshold = lastWinner * 1.20;
+        } else {
+            lowThreshold = winnerCount === 30 ? 150 : 90;
+            mediumThreshold = winnerCount === 30 ? 250 : 140;
+        }
+
+        numbers.forEach((num, index) => {
+            const div = document.createElement('div');
+            div.className = 'number-badge';
+            div.style.animationDelay = `${index * 0.05}s`;
+            div.textContent = num.toLocaleString();
+
+            if (num >= mediumThreshold) {
+                div.style.borderColor = '#4caf50';
+                div.style.color = '#4caf50';
+            } else if (num >= lowThreshold) {
+                div.style.borderColor = '#FFD23F';
+                div.style.color = '#FFD23F';
+            } else {
+                div.style.borderColor = '#ff4d4d';
+                div.style.color = '#ff4d4d';
+            }
+
+            numbersGrid.appendChild(div);
+        });
+
+        totalTicketsDisplay.textContent = strategyDesc;
+
+        const minNum = Math.min(...numbers);
+        const maxNum = Math.max(...numbers);
+        safeZoneDisplay.textContent = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()} | 避開熱門數字`;
+
+        renderDensityChart(winnerCount, strategyMode, lastWinner);
+    }
+
+    function renderDensityChart(winnerCount, strategyMode, lastWinner) {
+        const chartContainer = document.getElementById('density-chart');
         chartContainer.innerHTML = '';
         chartContainer.style.display = 'flex';
         chartContainer.style.alignItems = 'flex-end';
