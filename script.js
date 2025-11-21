@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function calculateStrategy(strategyMode, winnerCount, lastWinner) {
-        calculateBtn.innerHTML = '<span>蒙特卡羅模擬中...</span>';
+        calculateBtn.innerHTML = '<span>分析中...</span>';
         calculateBtn.disabled = true;
         resultsArea.classList.add('hidden');
 
@@ -237,56 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 估算參與人數
         let estimatedPlayers = '';
-        if (lastWinner) {
-            const avgDensity = 2.5;
-            const avgTicketsPerPerson = 6;
-            const totalTickets = lastWinner * avgDensity;
-            const players = Math.floor(totalTickets / avgTicketsPerPerson);
-            estimatedPlayers = ` | 估${Math.floor(players / 100) * 100}人`;
-        }
-
-        const strategyDesc = `蒙特卡羅 | 避熱門${estimatedPlayers}`;
-
-        let lowThreshold, mediumThreshold;
-        if (lastWinner) {
-            lowThreshold = lastWinner * 0.95;
-            mediumThreshold = lastWinner * 1.20;
-        } else {
-            lowThreshold = winnerCount === 30 ? 150 : 90;
-            mediumThreshold = winnerCount === 30 ? 250 : 140;
-        }
-
-        numbers.forEach((num, index) => {
-            const div = document.createElement('div');
-            div.className = 'number-badge';
-            div.style.animationDelay = `${index * 0.05}s`;
-            div.textContent = num.toLocaleString();
-
-            if (num >= mediumThreshold) {
-                div.style.borderColor = '#4caf50';
-                div.style.color = '#4caf50';
-            } else if (num >= lowThreshold) {
-                div.style.borderColor = '#FFD23F';
-                div.style.color = '#FFD23F';
-            } else {
-                div.style.borderColor = '#ff4d4d';
-                div.style.color = '#ff4d4d';
-            }
-
-            numbersGrid.appendChild(div);
-        });
-
-        totalTicketsDisplay.textContent = strategyDesc;
-
-        const minNum = Math.min(...numbers);
-        const maxNum = Math.max(...numbers);
-        safeZoneDisplay.textContent = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()} | 高唯一性`;
-
-        renderDensityChart(winnerCount, strategyMode, lastWinner);
-    }
-
-    function renderDensityChart(winnerCount, strategyMode, lastWinner) {
-        const chartContainer = document.getElementById('density-chart');
         chartContainer.innerHTML = '';
         chartContainer.style.display = 'flex';
         chartContainer.style.alignItems = 'flex-end';
@@ -335,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
         endLabel.style.color = '#4caf50';
 
         const modeLabel = document.createElement('div');
-        modeLabel.textContent = 'Monte Carlo | 5000次模擬';
+        modeLabel.textContent = winnerCount === 30 ? 'Top 30 獎' : 'Top 3 獎';
         modeLabel.style.position = 'absolute';
         modeLabel.style.top = '0';
         modeLabel.style.left = '5px';
