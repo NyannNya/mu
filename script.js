@@ -14,12 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function calculateStrategy(strategyMode, winnerCount, lastWinner) {
-        calculateBtn.innerHTML = '<span>計算中...</span>';
+        calculateBtn.innerHTML = '<span>蒙特卡羅模擬中...</span>';
         calculateBtn.disabled = true;
         resultsArea.classList.add('hidden');
 
         setTimeout(() => {
-            const recommendations = runSimulation(strategyMode, winnerCount, lastWinner);
+            const recommendations = runMonteCarloSimulation(strategyMode, winnerCount, lastWinner);
             displayResults(recommendations, winnerCount, strategyMode, lastWinner);
 
             calculateBtn.innerHTML = '<span>計算推薦號碼</span>';
@@ -27,144 +27,218 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     }
 
-    function runSimulation(strategyMode, winnerCount, lastWinner) {
-        let candidates = getColdStartRecommendations(strategyMode, winnerCount, lastWinner);
-        candidates = [...new Set(candidates)].sort((a, b) => a - b).slice(0, 10);
-        return candidates;
-    }
-
-    function getColdStartRecommendations(strategyMode, winnerCount, lastWinner) {
-        const recommendations = [];
-
-        // 🎲 基於賽局理論的參與人數估算模型
+    function runMonteCarloSimulation(strategyMode, winnerCount, lastWinner) {
+        // 步驟1：確定搜索範圍
+        let searchMin, searchMax;
         if (lastWinner) {
-            const base = lastWinner;
-
-            // 定義4種情境（基於人數變化和策略轉移）
-            let scenarios = [];
-
-            if (strategyMode === 'pyramid') {
-                // 金字塔：分散投注4種情境
-                scenarios = [
-                    { count: 2, min: 0.70, max: 0.90, weight: 0.15, name: '人數減少' },     // 人數↓20-30%
-                    { count: 3, min: 0.90, max: 1.05, weight: 0.30, name: '人數不變' },     // 人數持平，策略不變
-                    { count: 3, min: 1.05, max: 1.30, weight: 0.35, name: '轉向小數字' },   // 人數不變，但策略轉向小數字
-                    { count: 2, min: 1.30, max: 1.55, weight: 0.20, name: '人數增加' }      // 人數↑30-55%
-                ];
-
-            } else if (strategyMode === 'conservative') {
-                // 保守：只押「人數不變」和「人數增加」情境
-                scenarios = [
-                    { count: 5, min: 1.05, max: 1.25, weight: 0.50, name: '轉向小數字' },
-                    { count: 5, min: 1.25, max: 1.50, weight: 0.50, name: '人數增加' }
-                ];
-
-            } else if (strategyMode === 'aggressive') {
-                // 激進：賭人數減少或策略不變
-                scenarios = [
-                    { count: 4, min: 0.65, max: 0.90, weight: 0.40, name: '人數大減' },
-                    { count: 4, min: 0.90, max: 1.10, weight: 0.40, name: '人數微變' },
-                    { count: 2, min: 1.10, max: 1.35, weight: 0.20, name: '保險' }
-                ];
-            }
-
-            // 生成推薦號碼（按情境分配）
-            scenarios.forEach(scenario => {
-                const spacing = (scenario.max - scenario.min) / scenario.count;
-                for (let i = 0; i < scenario.count; i++) {
-                    const subMin = scenario.min + (spacing * i);
-                    const subMax = scenario.min + (spacing * (i + 1));
-                    const multiplier = randomFloat(subMin, subMax);
-                    recommendations.push(Math.floor(base * multiplier));
-                }
-            });
-
+            searchMin = Math.max(1, Math.floor(lastWinner * 0.6));
+            searchMax = Math.floor(lastWinner * 1.6);
         } else {
-            // 沒有歷史數據，使用預設範圍（基於真實數據 116-328）
-            const baselineMin = winnerCount === 30 ? 116 : 58;
-            const baselineMax = winnerCount === 30 ? 328 : 164;
-            const range = baselineMax - baselineMin;
+            searchMin = winnerCount === 30 ? 80 : 40;
+            searchMax = winnerCount === 30 ? 400 : 200;
+        }
 
-            if (strategyMode === 'pyramid') {
-                // 均勻分布在整個範圍
-                for (let i = 0; i < 10; i++) {
-                    const pos = i / 9;
-                    const rangeStart = range * pos;
-                    const rangeEnd = range * Math.min(pos + 0.15, 1.1);
-                    recommendations.push(baselineMin + randomInt(rangeStart, rangeEnd));
-                }
+        // 步驟2：蒙特卡羅模擬 - 模擬其他玩家的選擇行為
+        const popularityScore = simulatePlayerBehavior(searchMin, searchMax, 5000);
 
-            } else if (strategyMode === 'conservative') {
-                // 集中在後60%
-                const safeStart = baselineMin + range * 0.4;
-                const safeRange = range * 0.7;
-                for (let i = 0; i < 10; i++) {
-                    const pos = i / 10;
-                    recommendations.push(safeStart + randomInt(safeRange * pos, safeRange * Math.min(pos + 0.15, 1.0)));
-                }
+        // 步驟3：計算每個數字的"唯一性分數"
+        const uniquenessScores = [];
+        for (let num = searchMin; num <= searchMax; num++) {
+            const hotPenalty = calculateHotNumberPenalty(num);
+            const randomness = calculateRandomness(num);
+            const popularity = popularityScore[num] || 0;
 
-            } else if (strategyMode === 'aggressive') {
-                // 集中在前50%
-                const aggroRange = range * 0.5;
-                for (let i = 0; i < 8; i++) {
-                    const pos = i / 8;
-                    recommendations.push(baselineMin + randomInt(aggroRange * pos, aggroRange * Math.min(pos + 0.15, 1.0)));
-                }
-                recommendations.push(baselineMin + randomInt(aggroRange * 0.8, aggroRange * 1.2));
-                recommendations.push(baselineMin + randomInt(aggroRange * 1.3, aggroRange * 1.8));
+            // 綜合評分 = 低被選率 + 高隨機性 - 熱門懲罰
+            const score = (1 / (popularity + 1)) * 1000 + randomness - hotPenalty;
+
+            uniquenessScores.push({ num, score, popularity, randomness, hotPenalty });
+        }
+
+        // 步驟4：根據策略選擇數字
+        uniquenessScores.sort((a, b) => b.score - a.score);
+
+        let recommendations = [];
+        if (strategyMode === 'pyramid') {
+            // 金字塔：混合高唯一性 + 分散範圍
+            recommendations = selectBalancedNumbers(uniquenessScores, lastWinner, searchMin, searchMax);
+        } else if (strategyMode === 'conservative') {
+            // 保守：只選高唯一性的大數字
+            const conservativePool = uniquenessScores.filter(s => s.num >= (lastWinner || searchMin * 1.5));
+            recommendations = conservativePool.slice(0, 10).map(s => s.num);
+        } else if (strategyMode === 'aggressive') {
+            // 激進：選高唯一性的小數字
+            const aggressivePool = uniquenessScores.filter(s => s.num <= (lastWinner || searchMax * 0.6));
+            recommendations = aggressivePool.slice(0, 10).map(s => s.num);
+        }
+
+        return recommendations.slice(0, 10);
+    }
+
+    function simulatePlayerBehavior(min, max, iterations) {
+        const choices = {};
+
+        for (let i = 0; i < iterations; i++) {
+            // 模擬一個玩家的選擇行為
+            const playerType = Math.random();
+            let num;
+
+            if (playerType < 0.25) {
+                // 25%選整百數
+                const base = Math.floor(Math.random() * ((max - min) / 100 + 1)) * 100;
+                num = Math.min(max, min + base);
+            } else if (playerType < 0.40) {
+                // 15%選順子
+                num = generateSequenceNumber(min, max);
+            } else if (playerType < 0.50) {
+                // 10%選重複數字
+                num = generateRepeatNumber(min, max);
+            } else if (playerType < 0.60) {
+                // 10%選吉利數
+                num = generateLuckyNumber(min, max);
+            } else {
+                // 40%隨機選擇（但偏向小數字）
+                const skew = Math.pow(Math.random(), 1.5); // 偏向0
+                num = Math.floor(min + (max - min) * skew);
+            }
+
+            choices[num] = (choices[num] || 0) + 1;
+        }
+
+        return choices;
+    }
+
+    function calculateHotNumberPenalty(num) {
+        let penalty = 0;
+        const str = num.toString();
+
+        // 整百、整十懲罰
+        if (num % 100 === 0) penalty += 100;
+        else if (num % 50 === 0) penalty += 50;
+        else if (num % 10 === 0) penalty += 20;
+
+        // 順子懲罰 (123, 234, 345...)
+        if (isSequence(str)) penalty += 80;
+
+        // 重複數字懲罰 (111, 222, 1000...)
+        if (hasRepeatDigits(str)) penalty += 60;
+
+        // 吉利數懲罰
+        if (isLuckyNumber(num)) penalty += 40;
+
+        return penalty;
+    }
+
+    function calculateRandomness(num) {
+        const str = num.toString();
+        let randomness = 0;
+
+        // 數位差異度
+        if (str.length >= 2) {
+            for (let i = 0; i < str.length - 1; i++) {
+                randomness += Math.abs(parseInt(str[i]) - parseInt(str[i + 1])) * 3;
             }
         }
 
-        // 確保所有號碼 >= 1 且去重
-        return [...new Set(recommendations.map(n => Math.max(1, Math.floor(n))))];
+        // 質數加分
+        if (isPrime(num)) randomness += 30;
+
+        // 數字複雜度（不同數位數量）
+        const uniqueDigits = new Set(str.split('')).size;
+        randomness += uniqueDigits * 10;
+
+        return randomness;
     }
 
-    function randomFloat(min, max) {
-        return min + Math.random() * (max - min);
+    function selectBalancedNumbers(scores, lastWinner, min, max) {
+        const results = [];
+        const range = max - min;
+
+        // 分4檔選擇
+        const zones = [
+            { start: 0.0, end: 0.25, count: 2 },
+            { start: 0.25, end: 0.50, count: 3 },
+            { start: 0.50, end: 0.75, count: 3 },
+            { start: 0.75, end: 1.0, count: 2 }
+        ];
+
+        zones.forEach(zone => {
+            const zoneMin = min + range * zone.start;
+            const zoneMax = min + range * zone.end;
+            const zoneScores = scores.filter(s => s.num >= zoneMin && s.num < zoneMax);
+
+            for (let i = 0; i < zone.count && i < zoneScores.length; i++) {
+                results.push(zoneScores[i].num);
+            }
+        });
+
+        return results;
     }
 
-    function randomInt(min, max) {
-        min = Math.max(1, Math.floor(min));
-        max = Math.max(1, Math.floor(max));
+    // === 輔助函數 ===
 
-        if (min > max) {
-            [min, max] = [max, min];
+    function generateSequenceNumber(min, max) {
+        const sequences = ['123', '234', '345', '456', '567', '678', '789'];
+        const seq = sequences[Math.floor(Math.random() * sequences.length)];
+        return Math.min(max, Math.max(min, parseInt(seq)));
+    }
+
+    function generateRepeatNumber(min, max) {
+        const digit = Math.floor(Math.random() * 9) + 1;
+        const length = Math.random() < 0.5 ? 2 : 3;
+        const num = parseInt(digit.toString().repeat(length));
+        return Math.min(max, Math.max(min, num));
+    }
+
+    function generateLuckyNumber(min, max) {
+        const lucky = [168, 188, 520, 666, 888, 1314, 1688];
+        return lucky[Math.floor(Math.random() * lucky.length)] || min;
+    }
+
+    function isSequence(str) {
+        if (str.length < 2) return false;
+        for (let i = 0; i < str.length - 1; i++) {
+            if (parseInt(str[i + 1]) !== parseInt(str[i]) + 1) return false;
         }
+        return true;
+    }
 
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+    function hasRepeatDigits(str) {
+        const counts = {};
+        for (let char of str) {
+            counts[char] = (counts[char] || 0) + 1;
+            if (counts[char] >= 2) return true;
+        }
+        return false;
+    }
+
+    function isLuckyNumber(num) {
+        const luckyPatterns = [168, 188, 520, 666, 888, 1314, 1688, 6666, 8888];
+        return luckyPatterns.includes(num) || num.toString().includes('888') || num.toString().includes('666');
+    }
+
+    function isPrime(num) {
+        if (num < 2) return false;
+        if (num === 2) return true;
+        if (num % 2 === 0) return false;
+        for (let i = 3; i <= Math.sqrt(num); i += 2) {
+            if (num % i === 0) return false;
+        }
+        return true;
     }
 
     function displayResults(numbers, winnerCount, strategyMode, lastWinner) {
         resultsArea.classList.remove('hidden');
         numbersGrid.innerHTML = '';
 
-        // 策略說明
-        let strategyDesc = '';
-        if (strategyMode === 'pyramid') {
-            if (lastWinner) {
-                strategyDesc = `情境模型 | 4種人數變化`;
-            } else {
-                strategyDesc = '金字塔 | 均勻分散';
-            }
-        } else if (strategyMode === 'conservative') {
-            strategyDesc = '保守 | 只押增加情境';
-        } else {
-            strategyDesc = '激進 | 賭減少情境';
-        }
+        const strategyDesc = `蒙特卡羅 | 避熱門數字`;
 
-        // 動態顏色閾值
         let lowThreshold, mediumThreshold;
         if (lastWinner) {
             lowThreshold = lastWinner * 0.95;
             mediumThreshold = lastWinner * 1.20;
         } else {
-            if (winnerCount === 30) {
-                lowThreshold = 150;
-                mediumThreshold = 250;
-            } else {
-                lowThreshold = 90;
-                mediumThreshold = 140;
-            }
+            lowThreshold = winnerCount === 30 ? 150 : 90;
+            mediumThreshold = winnerCount === 30 ? 250 : 140;
         }
 
         numbers.forEach((num, index) => {
@@ -191,13 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const minNum = Math.min(...numbers);
         const maxNum = Math.max(...numbers);
-        let rangeText = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()}`;
-        if (lastWinner) {
-            const minRatio = ((minNum / lastWinner - 1) * 100).toFixed(0);
-            const maxRatio = ((maxNum / lastWinner - 1) * 100).toFixed(0);
-            rangeText += ` | ${minRatio}%~${maxRatio}%`;
-        }
-        safeZoneDisplay.textContent = rangeText;
+        safeZoneDisplay.textContent = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()} | 高唯一性`;
 
         renderDensityChart(winnerCount, strategyMode, lastWinner);
     }
@@ -215,10 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bars = 40;
         for (let i = 0; i < bars; i++) {
             const bar = document.createElement('div');
-
             const x = i / bars;
             let density = Math.pow(1 - x, 4);
-
             const height = Math.max(2, density * 100);
 
             bar.style.width = '100%';
@@ -234,12 +300,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             bar.style.borderRadius = '2px 2px 0 0';
             bar.style.opacity = '0.9';
-
             chartContainer.appendChild(bar);
         }
 
         const startLabel = document.createElement('div');
-        startLabel.textContent = lastWinner ? '人數↓' : '激進';
+        startLabel.textContent = '高重複';
         startLabel.style.position = 'absolute';
         startLabel.style.bottom = '0';
         startLabel.style.left = '0';
@@ -247,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startLabel.style.color = '#ff4d4d';
 
         const endLabel = document.createElement('div');
-        endLabel.textContent = lastWinner ? '人數↑' : '保守';
+        endLabel.textContent = '高唯一';
         endLabel.style.position = 'absolute';
         endLabel.style.bottom = '0';
         endLabel.style.right = '0';
@@ -255,9 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         endLabel.style.color = '#4caf50';
 
         const modeLabel = document.createElement('div');
-        const modeText = winnerCount === 30 ? 'Top 30' : 'Top 3';
-        const stratText = strategyMode === 'pyramid' ? ' | 4情境' : '';
-        modeLabel.textContent = modeText + stratText;
+        modeLabel.textContent = 'Monte Carlo | 5000次模擬';
         modeLabel.style.position = 'absolute';
         modeLabel.style.top = '0';
         modeLabel.style.left = '5px';
