@@ -70,45 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const aggressivePool = uniquenessScores.filter(s => s.num <= (lastWinner || searchMax * 0.6));
             recommendations = aggressivePool.slice(0, 10).map(s => s.num);
         }
-
-        return recommendations.slice(0, 10);
-    }
-
-    function simulatePlayerBehavior(min, max, iterations) {
-        const choices = {};
-
-        for (let i = 0; i < iterations; i++) {
-            // 模擬一個玩家的選擇行為
-            const playerType = Math.random();
-            let num;
-
-            if (playerType < 0.25) {
-                // 25%選整百數
-                const base = Math.floor(Math.random() * ((max - min) / 100 + 1)) * 100;
-                num = Math.min(max, min + base);
-            } else if (playerType < 0.40) {
-                // 15%選順子
-                num = generateSequenceNumber(min, max);
-            } else if (playerType < 0.50) {
-                // 10%選重複數字
-                num = generateRepeatNumber(min, max);
-            } else if (playerType < 0.60) {
-                // 10%選吉利數
-                num = generateLuckyNumber(min, max);
-            } else {
-                // 40%隨機選擇（但偏向小數字）
-                const skew = Math.pow(Math.random(), 1.5); // 偏向0
-                num = Math.floor(min + (max - min) * skew);
-            }
-
-            choices[num] = (choices[num] || 0) + 1;
-        }
-
-        return choices;
-    }
-
-    function calculateHotNumberPenalty(num) {
-        let penalty = 0;
         const str = num.toString();
 
         // 整百、整十懲罰
@@ -224,51 +185,37 @@ document.addEventListener('DOMContentLoaded', () => {
             if (num % i === 0) return false;
         }
         return true;
+        mediumThreshold = winnerCount === 30 ? 250 : 140;
     }
 
-    function displayResults(numbers, winnerCount, strategyMode, lastWinner) {
-        resultsArea.classList.remove('hidden');
-        numbersGrid.innerHTML = '';
+    numbers.forEach((num, index) => {
+        const div = document.createElement('div');
+        div.className = 'number-badge';
+        div.style.animationDelay = `${index * 0.05}s`;
+        div.textContent = num.toLocaleString();
 
-        const strategyDesc = `蒙特卡羅 | 避熱門數字`;
-
-        let lowThreshold, mediumThreshold;
-        if (lastWinner) {
-            lowThreshold = lastWinner * 0.95;
-            mediumThreshold = lastWinner * 1.20;
+        if (num >= mediumThreshold) {
+            div.style.borderColor = '#4caf50';
+            div.style.color = '#4caf50';
+        } else if (num >= lowThreshold) {
+            div.style.borderColor = '#FFD23F';
+            div.style.color = '#FFD23F';
         } else {
-            lowThreshold = winnerCount === 30 ? 150 : 90;
-            mediumThreshold = winnerCount === 30 ? 250 : 140;
+            div.style.borderColor = '#ff4d4d';
+            div.style.color = '#ff4d4d';
         }
 
-        numbers.forEach((num, index) => {
-            const div = document.createElement('div');
-            div.className = 'number-badge';
-            div.style.animationDelay = `${index * 0.05}s`;
-            div.textContent = num.toLocaleString();
+        numbersGrid.appendChild(div);
+    });
 
-            if (num >= mediumThreshold) {
-                div.style.borderColor = '#4caf50';
-                div.style.color = '#4caf50';
-            } else if (num >= lowThreshold) {
-                div.style.borderColor = '#FFD23F';
-                div.style.color = '#FFD23F';
-            } else {
-                div.style.borderColor = '#ff4d4d';
-                div.style.color = '#ff4d4d';
-            }
+    totalTicketsDisplay.textContent = strategyDesc;
 
-            numbersGrid.appendChild(div);
-        });
+    const minNum = Math.min(...numbers);
+    const maxNum = Math.max(...numbers);
+    safeZoneDisplay.textContent = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()} | 高唯一性`;
 
-        totalTicketsDisplay.textContent = strategyDesc;
-
-        const minNum = Math.min(...numbers);
-        const maxNum = Math.max(...numbers);
-        safeZoneDisplay.textContent = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()} | 高唯一性`;
-
-        renderDensityChart(winnerCount, strategyMode, lastWinner);
-    }
+    renderDensityChart(winnerCount, strategyMode, lastWinner);
+}
 
     function renderDensityChart(winnerCount, strategyMode, lastWinner) {
         const chartContainer = document.getElementById('density-chart');
