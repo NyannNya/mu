@@ -36,44 +36,44 @@ document.addEventListener('DOMContentLoaded', () => {
     function getColdStartRecommendations(strategyMode, winnerCount, lastWinner) {
         const recommendations = [];
 
-        // 📊 基於概率分布的數學模型
+        // 🎲 基於賽局理論的參與人數估算模型
         if (lastWinner) {
             const base = lastWinner;
 
-            // 根據模式定義增長率區間（百分比）
-            let layers = [];
+            // 定義4種情境（基於人數變化和策略轉移）
+            let scenarios = [];
 
             if (strategyMode === 'pyramid') {
-                // 金字塔：4層概率分布
-                layers = [
-                    { count: 2, min: 0.97, max: 1.02, name: '略冒險' },   // -3% ~ +2%
-                    { count: 4, min: 1.02, max: 1.12, name: 'Nash均衡' }, // +2% ~ +12%
-                    { count: 3, min: 1.12, max: 1.28, name: '保險層' },   // +12% ~ +28%
-                    { count: 1, min: 1.28, max: 1.45, name: '極保險' }    // +28% ~ +45%
+                // 金字塔：分散投注4種情境
+                scenarios = [
+                    { count: 2, min: 0.70, max: 0.90, weight: 0.15, name: '人數減少' },     // 人數↓20-30%
+                    { count: 3, min: 0.90, max: 1.05, weight: 0.30, name: '人數不變' },     // 人數持平，策略不變
+                    { count: 3, min: 1.05, max: 1.30, weight: 0.35, name: '轉向小數字' },   // 人數不變，但策略轉向小數字
+                    { count: 2, min: 1.30, max: 1.55, weight: 0.20, name: '人數增加' }      // 人數↑30-55%
                 ];
 
             } else if (strategyMode === 'conservative') {
-                // 保守：全部集中在安全區
-                layers = [
-                    { count: 10, min: 1.15, max: 1.35, name: '安全區' }   // +15% ~ +35%
+                // 保守：只押「人數不變」和「人數增加」情境
+                scenarios = [
+                    { count: 5, min: 1.05, max: 1.25, weight: 0.50, name: '轉向小數字' },
+                    { count: 5, min: 1.25, max: 1.50, weight: 0.50, name: '人數增加' }
                 ];
 
             } else if (strategyMode === 'aggressive') {
-                // 激進：重押接近lastWinner
-                layers = [
-                    { count: 6, min: 0.92, max: 1.05, name: '激進' },     // -8% ~ +5%
-                    { count: 2, min: 1.05, max: 1.15, name: '緩衝' },     // +5% ~ +15%
-                    { count: 2, min: 1.20, max: 1.40, name: '保險' }      // +20% ~ +40%
+                // 激進：賭人數減少或策略不變
+                scenarios = [
+                    { count: 4, min: 0.65, max: 0.90, weight: 0.40, name: '人數大減' },
+                    { count: 4, min: 0.90, max: 1.10, weight: 0.40, name: '人數微變' },
+                    { count: 2, min: 1.10, max: 1.35, weight: 0.20, name: '保險' }
                 ];
             }
 
-            // 生成推薦號碼
-            layers.forEach(layer => {
-                const spacing = (layer.max - layer.min) / layer.count;
-                for (let i = 0; i < layer.count; i++) {
-                    // 在每個子區間內隨機選擇
-                    const subMin = layer.min + (spacing * i);
-                    const subMax = layer.min + (spacing * (i + 1));
+            // 生成推薦號碼（按情境分配）
+            scenarios.forEach(scenario => {
+                const spacing = (scenario.max - scenario.min) / scenario.count;
+                for (let i = 0; i < scenario.count; i++) {
+                    const subMin = scenario.min + (spacing * i);
+                    const subMax = scenario.min + (spacing * (i + 1));
                     const multiplier = randomFloat(subMin, subMax);
                     recommendations.push(Math.floor(base * multiplier));
                 }
@@ -81,40 +81,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } else {
             // 沒有歷史數據，使用預設範圍（基於真實數據 116-328）
-            const baselineMin = winnerCount === 30 ? 116 : 58;  // 30人模式: 116, 3人模式: 58
+            const baselineMin = winnerCount === 30 ? 116 : 58;
             const baselineMax = winnerCount === 30 ? 328 : 164;
+            const range = baselineMax - baselineMin;
 
             if (strategyMode === 'pyramid') {
-                // 分層覆蓋整個範圍
-                const range = baselineMax - baselineMin;
-                recommendations.push(baselineMin + randomInt(0, range * 0.15));
-                recommendations.push(baselineMin + randomInt(range * 0.10, range * 0.25));
-                recommendations.push(baselineMin + randomInt(range * 0.20, range * 0.35));
-                recommendations.push(baselineMin + randomInt(range * 0.30, range * 0.45));
-                recommendations.push(baselineMin + randomInt(range * 0.40, range * 0.55));
-                recommendations.push(baselineMin + randomInt(range * 0.50, range * 0.65));
-                recommendations.push(baselineMin + randomInt(range * 0.60, range * 0.75));
-                recommendations.push(baselineMin + randomInt(range * 0.70, range * 0.85));
-                recommendations.push(baselineMin + randomInt(range * 0.80, range * 0.95));
-                recommendations.push(baselineMin + randomInt(range * 0.90, range * 1.10));
+                // 均勻分布在整個範圍
+                for (let i = 0; i < 10; i++) {
+                    const pos = i / 9;
+                    const rangeStart = range * pos;
+                    const rangeEnd = range * Math.min(pos + 0.15, 1.1);
+                    recommendations.push(baselineMin + randomInt(rangeStart, rangeEnd));
+                }
 
             } else if (strategyMode === 'conservative') {
-                // 集中在後60%安全區
-                const safeStart = baselineMin + (baselineMax - baselineMin) * 0.4;
-                const safeRange = (baselineMax - baselineMin) * 0.7;
+                // 集中在後60%
+                const safeStart = baselineMin + range * 0.4;
+                const safeRange = range * 0.7;
                 for (let i = 0; i < 10; i++) {
                     const pos = i / 10;
-                    recommendations.push(safeStart + randomInt(safeRange * pos, safeRange * (pos + 0.15)));
+                    recommendations.push(safeStart + randomInt(safeRange * pos, safeRange * Math.min(pos + 0.15, 1.0)));
                 }
 
             } else if (strategyMode === 'aggressive') {
-                // 集中在前50%激進區
-                const aggroRange = (baselineMax - baselineMin) * 0.5;
+                // 集中在前50%
+                const aggroRange = range * 0.5;
                 for (let i = 0; i < 8; i++) {
                     const pos = i / 8;
-                    recommendations.push(baselineMin + randomInt(aggroRange * pos, aggroRange * (pos + 0.15)));
+                    recommendations.push(baselineMin + randomInt(aggroRange * pos, aggroRange * Math.min(pos + 0.15, 1.0)));
                 }
-                // 加2個保險
                 recommendations.push(baselineMin + randomInt(aggroRange * 0.8, aggroRange * 1.2));
                 recommendations.push(baselineMin + randomInt(aggroRange * 1.3, aggroRange * 1.8));
             }
@@ -147,24 +142,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let strategyDesc = '';
         if (strategyMode === 'pyramid') {
             if (lastWinner) {
-                const minRatio = (Math.min(...numbers) / lastWinner * 100 - 100).toFixed(0);
-                const maxRatio = (Math.max(...numbers) / lastWinner * 100 - 100).toFixed(0);
-                strategyDesc = `百分比模型 | ${minRatio}% ~ ${maxRatio}%`;
+                strategyDesc = `情境模型 | 4種人數變化`;
             } else {
-                strategyDesc = '金字塔4層 | 概率分布';
+                strategyDesc = '金字塔 | 均勻分散';
             }
         } else if (strategyMode === 'conservative') {
-            strategyDesc = '保守穩健 | +15%~+35%';
+            strategyDesc = '保守 | 只押增加情境';
         } else {
-            strategyDesc = '激進冒險 | -8%~+5%';
+            strategyDesc = '激進 | 賭減少情境';
         }
 
         // 動態顏色閾值
         let lowThreshold, mediumThreshold;
         if (lastWinner) {
-            // 基於lastWinner的動態閾值（百分比）
-            lowThreshold = lastWinner * 1.00;
-            mediumThreshold = lastWinner * 1.15;
+            lowThreshold = lastWinner * 0.95;
+            mediumThreshold = lastWinner * 1.20;
         } else {
             if (winnerCount === 30) {
                 lowThreshold = 150;
@@ -201,8 +193,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxNum = Math.max(...numbers);
         let rangeText = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()}`;
         if (lastWinner) {
-            const avgRatio = ((minNum + maxNum) / 2 / lastWinner * 100 - 100).toFixed(1);
-            rangeText += ` | 平均${avgRatio > 0 ? '+' : ''}${avgRatio}%`;
+            const minRatio = ((minNum / lastWinner - 1) * 100).toFixed(0);
+            const maxRatio = ((maxNum / lastWinner - 1) * 100).toFixed(0);
+            rangeText += ` | ${minRatio}%~${maxRatio}%`;
         }
         safeZoneDisplay.textContent = rangeText;
 
@@ -246,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const startLabel = document.createElement('div');
-        startLabel.textContent = lastWinner ? '-3%' : '激進';
+        startLabel.textContent = lastWinner ? '人數↓' : '激進';
         startLabel.style.position = 'absolute';
         startLabel.style.bottom = '0';
         startLabel.style.left = '0';
@@ -254,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startLabel.style.color = '#ff4d4d';
 
         const endLabel = document.createElement('div');
-        endLabel.textContent = lastWinner ? '+45%' : '保守';
+        endLabel.textContent = lastWinner ? '人數↑' : '保守';
         endLabel.style.position = 'absolute';
         endLabel.style.bottom = '0';
         endLabel.style.right = '0';
@@ -263,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const modeLabel = document.createElement('div');
         const modeText = winnerCount === 30 ? 'Top 30' : 'Top 3';
-        const stratText = strategyMode === 'pyramid' ? ' | 百分比模型' : '';
+        const stratText = strategyMode === 'pyramid' ? ' | 4情境' : '';
         modeLabel.textContent = modeText + stratText;
         modeLabel.style.position = 'absolute';
         modeLabel.style.top = '0';
