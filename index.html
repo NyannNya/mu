@@ -19,24 +19,6 @@
     <main class="container">
         <header class="header">
             <div class="logo-container">
-                <h1>🍁 Lucky Choice Strategy</h1>
-                <p class="subtitle">MapleStory N Event Helper</p>
-            </div>
-        </header>
-
-        <div class="card glass-panel">
-            <div class="input-group">
-                <label for="participants">
-                    <span class="icon">👥</span> 預估活躍玩家 (Participants)
-                </label>
-                <input type="number" id="participants" value="20000" min="1000">
-                <p class="hint">預設 20,000 人</p>
-            </div>
-
-            <div class="input-group">
-                <label for="tickets">
-                    <span class="icon">🎟️</span> 每人票數 (Tickets)
-                </label>
                 <input type="number" id="tickets" value="10" min="1" max="30">
             </div>
 
@@ -73,34 +55,34 @@
                 <span>計算推薦號碼</span>
                 <div class="btn-effect"></div>
             </button>
-        </div>
-
-        <div id="results-area" class="results-container hidden">
-            <div class="card glass-panel result-card">
-                <h2>🎲 推薦號碼 (Top 10)</h2>
-                <p class="disclaimer">基於演算法分析產生</p>
-                <div id="numbers-grid" class="numbers-grid">
-                    <!-- Numbers will be injected here -->
-                </div>
             </div>
 
-            <div class="card glass-panel stats-card">
-                <h3>📊 參考數據</h3>
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <span class="label">估計有效票數</span>
-                        <span class="value" id="total-tickets">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="label">建議選取範圍</span>
-                        <span class="value" id="safe-zone">分析中</span>
+            <div id="results-area" class="results-container hidden">
+                <div class="card glass-panel result-card">
+                    <h2>🎲 推薦號碼 (Top 10)</h2>
+                    <p class="disclaimer">基於演算法分析產生</p>
+                    <div id="numbers-grid" class="numbers-grid">
+                        <!-- Numbers will be injected here -->
                     </div>
                 </div>
-                <div class="chart-placeholder" id="density-chart">
-                    <!-- Simple CSS bar chart or text visualization -->
+
+                <div class="card glass-panel stats-card">
+                    <h3>📊 參考數據</h3>
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <span class="label">估計有效票數</span>
+                            <span class="value" id="total-tickets">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="label">建議選取範圍</span>
+                            <span class="value" id="safe-zone">分析中</span>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder" id="density-chart">
+                        <!-- Simple CSS bar chart or text visualization -->
+                    </div>
                 </div>
             </div>
-        </div>
     </main>
 
     <script src="script.js"></script>
