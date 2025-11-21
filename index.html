@@ -55,41 +55,81 @@
                 <p class="hint">輸入上次最小獲勝號碼可優化建議</p>
             </div>
 
-            <button id="calculate-btn" class="btn-primary">
-                <span>計算推薦號碼</span>
-                <div class="btn-effect"></div>
-            </button>
-        </div>
+            <!DOCTYPE html>
+            <html lang="zh-TW">
 
-        <div id="results-area" class="results-container hidden">
-            <div class="card glass-panel result-card">
-                <h2>🎲 推薦號碼 (Top 10)</h2>
-                <p class="disclaimer">基於演算法分析產生</p>
-                <div id="numbers-grid" class="numbers-grid">
-                    <!-- Numbers will be injected here -->
-                </div>
-            </div>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>MapleStory N - Lucky Choice Strategy</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link
+                    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap"
+                    rel="stylesheet">
+                <link rel="stylesheet" href="style.css">
+            </head>
 
-            <div class="card glass-panel stats-card">
-                <h3>📊 參考數據</h3>
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <span class="label">策略說明</span>
-                        <span class="value" id="total-tickets">0</span>
+            <body>
+                <div class="bg-animation"></div>
+
+                <main class="container">
+                    <header class="header">
+                        <div class="logo-container">
+                            <h1>🍁 Lucky Choice Strategy</h1>
+                            <p class="subtitle">MapleStory N Event Helper</p>
+                        </div>
+                    </header>
+
+                    <div class="card glass-panel">
+                        <div class="input-group">
+                            <label for="winner-count">
+                                <span class="icon">�</span> 中獎模式 (Mode)
+                            </label>
+                            <select id="winner-count">
+                                <option value="30" selected>🎁 Top 30 (30人中獎)</option>
+                                <option value="3">🥇 Top 3 (3人中獎)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="strategy-mode">
+                                <span class="icon">🎯</span> 投注風格 (Style)
+                            </label>
+                            <select id="strategy-mode">
+                                <option value="pyramid" selected>🏔️ 金字塔混合 (推薦)</option>
+                                <option value="conservative">🛡️ 保守穩健 (安全優先)</option>
+                                <option value="aggressive">🔥 激進冒險 (博高回報)</option>
+                            </select>
+                            <p class="hint">金字塔策略分5層投注，不受人數波動影響</p>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="last-winner">
+                                <span class="icon">📜</span> 上一輪最小獲勝號碼 (選填)
+                            </label>
+                            <input type="number" id="last-winner" placeholder="不需要則留空">
+                            <p class="hint">輸入上次最小獲勝號碼可優化建議</p>
+                        </div>
+
+                        <button id="calculate-btn" class="btn-primary">
+                            <span>計算推薦號碼</span>
+                            <div class="btn-effect"></div>
+                        </button>
                     </div>
-                    <div class="stat-item">
-                        <span class="label">建議選取範圍</span>
-                        <span class="value" id="safe-zone">分析中</span>
+
+                    <div id="results-area" class="results-container hidden">
+                        <div class="card glass-panel result-card">
+                            <h2>🎯 推薦號碼</h2>
+                            <div id="numbers-grid" class="numbers-grid">
+                                <!-- Numbers will be injected here -->
+                            </div>
+                            <p class="range-hint">建議範圍：<span id="safe-zone">--</span></p>
+                        </div>
                     </div>
-                </div>
-                <div class="chart-placeholder" id="density-chart">
-                    <!-- Simple CSS bar chart or text visualization -->
-                </div>
-            </div>
-        </div>
-    </main>
+                </main>
 
-    <script src="script.js"></script>
-</body>
+                <script src="script.js"></script>
+            </body>
 
-</html>
+            </html>
