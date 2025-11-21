@@ -41,6 +41,16 @@
             </div>
 
             <div class="input-group">
+                <label for="winner-count">
+                    <span class="icon">🏆</span> 中獎人數 (Winners)
+                </label>
+                <select id="winner-count">
+                    <option value="30" selected>🎁 Top 30 (30人中獎)</option>
+                    <option value="3">🥇 Top 3 (3人中獎)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
                 <label for="strategy-mode">
                     <span class="icon">🎯</span> 策略模式 (Strategy)
                 </label>
@@ -53,10 +63,10 @@
 
             <div class="input-group">
                 <label for="last-winner">
-                    <span class="icon">🏆</span> 上一輪獲勝號碼 (選填)
+                    <span class="icon">📜</span> 上一輪最小獲勝號碼 (選填)
                 </label>
                 <input type="number" id="last-winner" placeholder="不需要則留空">
-                <p class="hint">輸入上次獲勝號碼可優化建議</p>
+                <p class="hint">輸入上次最小獲勝號碼可優化建議</p>
             </div>
 
             <button id="calculate-btn" class="btn-primary">

@@ -9,26 +9,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const participants = parseInt(document.getElementById('participants').value) || 20000;
         const ticketsPerPerson = parseInt(document.getElementById('tickets').value) || 10;
         const strategyMode = document.getElementById('strategy-mode').value;
+        const winnerCount = parseInt(document.getElementById('winner-count').value) || 30;
         const lastWinner = parseInt(document.getElementById('last-winner').value) || null;
 
-        calculateStrategy(participants, ticketsPerPerson, strategyMode, lastWinner);
+        calculateStrategy(participants, ticketsPerPerson, strategyMode, winnerCount, lastWinner);
     });
 
-    function calculateStrategy(participants, ticketsPerPerson, strategyMode, lastWinner) {
+    function calculateStrategy(participants, ticketsPerPerson, strategyMode, winnerCount, lastWinner) {
         calculateBtn.innerHTML = '<span>計算中...</span>';
         calculateBtn.disabled = true;
         resultsArea.classList.add('hidden');
 
         setTimeout(() => {
-            const recommendations = runSimulation(participants, ticketsPerPerson, strategyMode, lastWinner);
-            displayResults(recommendations, participants * ticketsPerPerson);
+            const recommendations = runSimulation(participants, ticketsPerPerson, strategyMode, winnerCount, lastWinner);
+            displayResults(recommendations, participants * ticketsPerPerson, winnerCount);
 
             calculateBtn.innerHTML = '<span>計算推薦號碼</span>';
             calculateBtn.disabled = false;
         }, 100);
     }
 
-    function runSimulation(participants, ticketsPerPerson, strategyMode, lastWinner) {
+    function runSimulation(participants, ticketsPerPerson, strategyMode, winnerCount, lastWinner) {
         const actualTickets = estimateActualTickets(participants, ticketsPerPerson);
         const playerModel = simulatePlayerDistribution(actualTickets);
 
@@ -40,69 +41,99 @@ document.addEventListener('DOMContentLoaded', () => {
             candidates.push(base + 7);
             candidates.push(base + 13);
 
-            const calculated = getColdStartRecommendations(actualTickets, playerModel, strategyMode);
+            const calculated = getColdStartRecommendations(actualTickets, playerModel, strategyMode, winnerCount);
             candidates = candidates.concat(calculated.slice(0, 7));
         } else {
-            candidates = getColdStartRecommendations(actualTickets, playerModel, strategyMode);
+            candidates = getColdStartRecommendations(actualTickets, playerModel, strategyMode, winnerCount);
         }
 
         candidates = [...new Set(candidates)].sort((a, b) => a - b).slice(0, 10);
         return candidates;
     }
 
-    function getColdStartRecommendations(totalTickets, playerModel, strategyMode) {
+    function getColdStartRecommendations(totalTickets, playerModel, strategyMode, winnerCount) {
         const recommendations = [];
-        const safeStart = estimateSafeZoneStart(totalTickets, playerModel);
 
-        if (strategyMode === 'conservative') {
-            // 保守策略：全部集中在安全區
-            for (let i = 0; i < 10; i++) {
-                const min = safeStart + (i * 3000);
-                const max = min + 3000;
-                recommendations.push(randomInt(min, max));
+        // Based on real data: 30 winners = 116-328, 3 winners would be even lower
+        // For 30 winners: most numbers fall in 100-350 range
+        // For 3 winners: assume 50-250 range (more competitive)
+
+        if (winnerCount === 30) {
+            // 30人中獎模式：根據真實數據 116-328
+            const baseMin = 100;
+            const baseMax = 350;
+
+            if (strategyMode === 'conservative') {
+                // 保守策略：集中在200-350（較高安全區）
+                for (let i = 0; i < 10; i++) {
+                    const min = 200 + (i * 15);
+                    const max = min + 20;
+                    recommendations.push(randomInt(min, max));
+                }
+
+            } else if (strategyMode === 'aggressive') {
+                // 激進策略：重押低數字 100-200
+                for (let i = 0; i < 6; i++) {
+                    const min = 100 + (i * 15);
+                    const max = min + 20;
+                    recommendations.push(randomInt(min, max));
+                }
+                recommendations.push(randomInt(220, 250));
+                recommendations.push(randomInt(250, 280));
+                recommendations.push(randomInt(280, 310));
+                recommendations.push(randomInt(310, 340));
+
+            } else {
+                // 平衡策略：覆蓋 120-330 (符合真實數據)
+                recommendations.push(randomInt(115, 135));  // 對應真實 116
+                recommendations.push(randomInt(160, 180));  // 對應真實 166-180
+                recommendations.push(randomInt(190, 210));  // 對應真實 195-209
+                recommendations.push(randomInt(215, 230));  // 對應真實 216-226
+                recommendations.push(randomInt(240, 255));  // 對應真實 240-252
+                recommendations.push(randomInt(260, 275));  // 對應真實 264-275
+                recommendations.push(randomInt(280, 295));  // 對應真實 284-297
+                recommendations.push(randomInt(295, 310));  // 對應真實 298-302
+                recommendations.push(randomInt(310, 325));  // 對應真實 318
+                recommendations.push(randomInt(325, 340));  // 對應真實 328 附近
             }
-
-        } else if (strategyMode === 'aggressive') {
-            // 激進策略：重押低數字
-            const aggressiveMin = Math.max(1, Math.floor(safeStart * 0.10));
-            const aggressiveMax = Math.max(1, Math.floor(safeStart * 0.40));
-
-            for (let i = 0; i < 5; i++) {
-                const min = Math.max(1, aggressiveMin + (i * 5000));
-                const max = min + 4000;
-                recommendations.push(randomInt(min, max));
-            }
-
-            const mediumMin = Math.max(1, Math.floor(safeStart * 0.45));
-            const mediumMax = Math.max(1, Math.floor(safeStart * 0.65));
-
-            recommendations.push(randomInt(mediumMin, mediumMin + 4000));
-            recommendations.push(randomInt(mediumMin + 5000, mediumMin + 9000));
-            recommendations.push(randomInt(mediumMax - 4000, mediumMax));
-
-            recommendations.push(randomInt(safeStart, safeStart + 5000));
-            recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
 
         } else {
-            // 平衡策略 (default)
-            const aggressiveMin = Math.max(1, Math.floor(safeStart * 0.15));
-            const aggressiveMax = Math.max(1, Math.floor(safeStart * 0.35));
+            // 3人中獎模式：競爭更激烈，號碼更小
+            const baseMin = 50;
+            const baseMax = 250;
 
-            recommendations.push(randomInt(aggressiveMin, aggressiveMin + 3000));
-            recommendations.push(randomInt(aggressiveMin + 5000, aggressiveMin + 8000));
-            recommendations.push(randomInt(aggressiveMax - 5000, aggressiveMax));
+            if (strategyMode === 'conservative') {
+                // 保守策略：集中在150-250
+                for (let i = 0; i < 10; i++) {
+                    const min = 150 + (i * 10);
+                    const max = min + 15;
+                    recommendations.push(randomInt(min, max));
+                }
 
-            const mediumMin = Math.max(1, Math.floor(safeStart * 0.5));
-            const mediumMax = Math.max(1, Math.floor(safeStart * 0.65));
+            } else if (strategyMode === 'aggressive') {
+                // 激進策略：重押極低數字 50-120
+                for (let i = 0; i < 7; i++) {
+                    const min = 50 + (i * 10);
+                    const max = min + 12;
+                    recommendations.push(randomInt(min, max));
+                }
+                recommendations.push(randomInt(130, 150));
+                recommendations.push(randomInt(160, 180));
+                recommendations.push(randomInt(190, 210));
 
-            recommendations.push(randomInt(mediumMin, mediumMin + 3000));
-            recommendations.push(randomInt(mediumMin + 4000, mediumMin + 7000));
-            recommendations.push(randomInt(mediumMax - 3000, mediumMax));
-
-            recommendations.push(randomInt(safeStart, safeStart + 2500));
-            recommendations.push(randomInt(safeStart + 2500, safeStart + 5000));
-            recommendations.push(randomInt(safeStart + 5000, safeStart + 10000));
-            recommendations.push(randomInt(safeStart + 15000, safeStart + 25000));
+            } else {
+                // 平衡策略：覆蓋 80-220
+                recommendations.push(randomInt(75, 90));
+                recommendations.push(randomInt(95, 110));
+                recommendations.push(randomInt(115, 130));
+                recommendations.push(randomInt(135, 150));
+                recommendations.push(randomInt(155, 170));
+                recommendations.push(randomInt(175, 190));
+                recommendations.push(randomInt(195, 210));
+                recommendations.push(randomInt(215, 230));
+                recommendations.push(randomInt(235, 250));
+                recommendations.push(randomInt(255, 270));
+            }
         }
 
         return recommendations;
@@ -121,17 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    function estimateSafeZoneStart(totalTickets, playerModel) {
-        const safeThreshold = Math.floor(totalTickets * 0.7);
-        return safeThreshold;
-    }
-
     function randomInt(min, max) {
-        // Ensure min is at least 1 (lottery numbers start from 1)
         min = Math.max(1, Math.floor(min));
         max = Math.max(1, Math.floor(max));
 
-        // Ensure min <= max
         if (min > max) {
             [min, max] = [max, min];
         }
@@ -139,15 +163,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    function displayResults(numbers, maxTickets) {
+    function displayResults(numbers, maxTickets, winnerCount) {
         resultsArea.classList.remove('hidden');
         numbersGrid.innerHTML = '';
 
         const actualTickets = Math.floor(maxTickets * 0.5);
-        const safeStart = Math.floor(actualTickets * 0.7);
 
-        const aggressiveMax = Math.floor(safeStart * 0.35);
-        const mediumMax = Math.floor(safeStart * 0.65);
+        // Color thresholds based on winner count
+        let lowThreshold, mediumThreshold;
+        if (winnerCount === 30) {
+            lowThreshold = 180;    // Red: < 180
+            mediumThreshold = 260; // Yellow: 180-260, Green: > 260
+        } else {
+            lowThreshold = 120;    // Red: < 120
+            mediumThreshold = 180; // Yellow: 120-180, Green: > 180
+        }
 
         numbers.forEach((num, index) => {
             const div = document.createElement('div');
@@ -155,10 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.animationDelay = `${index * 0.05}s`;
             div.textContent = num.toLocaleString();
 
-            if (num >= safeStart) {
+            if (num >= mediumThreshold) {
                 div.style.borderColor = '#4caf50';
                 div.style.color = '#4caf50';
-            } else if (num >= mediumMax) {
+            } else if (num >= lowThreshold) {
                 div.style.borderColor = '#FFD23F';
                 div.style.color = '#FFD23F';
             } else {
@@ -171,14 +201,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         totalTicketsDisplay.textContent = actualTickets.toLocaleString();
 
-        const aggressiveMin = Math.max(1, Math.floor(safeStart * 0.15));
-        const safeEnd = safeStart + 25000;
-        safeZoneDisplay.textContent = `${aggressiveMin.toLocaleString()} - ${safeEnd.toLocaleString()}`;
+        const minNum = Math.min(...numbers);
+        const maxNum = Math.max(...numbers);
+        safeZoneDisplay.textContent = `${minNum.toLocaleString()} - ${maxNum.toLocaleString()}`;
 
-        renderDensityChart(actualTickets);
+        renderDensityChart(winnerCount);
     }
 
-    function renderDensityChart(totalTickets) {
+    function renderDensityChart(winnerCount) {
         const chartContainer = document.getElementById('density-chart');
         chartContainer.innerHTML = '';
         chartContainer.style.display = 'flex';
@@ -230,17 +260,17 @@ document.addEventListener('DOMContentLoaded', () => {
         endLabel.style.fontSize = '0.7rem';
         endLabel.style.color = '#4caf50';
 
-        const midLabel = document.createElement('div');
-        midLabel.textContent = 'Density ↓';
-        midLabel.style.position = 'absolute';
-        midLabel.style.top = '0';
-        midLabel.style.left = '5px';
-        midLabel.style.fontSize = '0.7rem';
-        midLabel.style.color = '#666';
+        const modeLabel = document.createElement('div');
+        modeLabel.textContent = winnerCount === 30 ? 'Top 30 模式' : 'Top 3 模式';
+        modeLabel.style.position = 'absolute';
+        modeLabel.style.top = '0';
+        modeLabel.style.left = '5px';
+        modeLabel.style.fontSize = '0.7rem';
+        modeLabel.style.color = '#666';
 
         chartContainer.style.position = 'relative';
         chartContainer.appendChild(startLabel);
         chartContainer.appendChild(endLabel);
-        chartContainer.appendChild(midLabel);
+        chartContainer.appendChild(modeLabel);
     }
 });
