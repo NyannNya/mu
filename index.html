@@ -61,6 +61,122 @@
             </button>
         </div>
 
+        <!-- Historical Data Panel -->
+        <div class="card glass-panel collapsible-panel">
+            <div class="panel-header" onclick="togglePanel('history-panel')">
+                <h2>📊 歷史數據管理</h2>
+                <span class="toggle-icon" id="history-toggle">▼</span>
+            </div>
+            <div id="history-panel" class="panel-content">
+                <div class="history-input-section">
+                    <h3>新增歷史回合</h3>
+                    <div class="input-row">
+                        <div class="input-group compact">
+                            <label for="history-round">回合</label>
+                            <input type="number" id="history-round" placeholder="第幾回">
+                        </div>
+                        <div class="input-group compact">
+                            <label for="history-min">最小獲勝號碼</label>
+                            <input type="number" id="history-min" placeholder="例: 136">
+                        </div>
+                        <div class="input-group compact">
+                            <label for="history-max">最大獲勝號碼</label>
+                            <input type="number" id="history-max" placeholder="例: 328">
+                        </div>
+                    </div>
+                    <div class="button-row">
+                        <button id="add-history-btn" class="btn-secondary">
+                            <span>➕ 新增數據</span>
+                        </button>
+                        <button id="clear-history-btn" class="btn-danger">
+                            <span>🗑️ 清空全部</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="history-table-section">
+                    <h3>已記錄回合</h3>
+                    <div id="history-table-container">
+                        <table id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>回合</th>
+                                    <th>最小號碼</th>
+                                    <th>最大號碼</th>
+                                    <th>範圍跨度</th>
+                                    <th>趨勢</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <tr class="empty-state">
+                                    <td colspan="6">尚無歷史數據</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation Dashboard -->
+        <div class="card glass-panel collapsible-panel">
+            <div class="panel-header" onclick="togglePanel('eval-panel')">
+                <h2>📈 策略評估儀表板</h2>
+                <span class="toggle-icon" id="eval-toggle">▼</span>
+            </div>
+            <div id="eval-panel" class="panel-content hidden">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">趨勢檢測</div>
+                        <div class="metric-value" id="trend-direction">--</div>
+                        <div class="metric-desc" id="trend-description">需要至少2筆數據</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">範圍成長率</div>
+                        <div class="metric-value" id="growth-rate">--</div>
+                        <div class="metric-desc">相較於上一回</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">預測下回範圍</div>
+                        <div class="metric-value" id="predicted-range">--</div>
+                        <div class="metric-desc">基於趨勢分析</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Settings -->
+        <div class="card glass-panel collapsible-panel">
+            <div class="panel-header" onclick="togglePanel('settings-panel')">
+                <h2>⚙️ 進階設定</h2>
+                <span class="toggle-icon" id="settings-toggle">▼</span>
+            </div>
+            <div id="settings-panel" class="panel-content hidden">
+                <div class="input-group">
+                    <label for="dynamic-adjustment-toggle">
+                        <span class="icon">🔄</span> 啟用動態範圍調整
+                    </label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="dynamic-adjustment-toggle" checked>
+                        <label for="dynamic-adjustment-toggle" class="toggle-label"></label>
+                    </div>
+                    <p class="hint">根據歷史趨勢自動調整預測係數 (需要至少2筆歷史數據)</p>
+                </div>
+                <div class="input-group">
+                    <label for="trend-aggressiveness">
+                        <span class="icon">🎚️</span> 趨勢追隨強度: <span id="aggressiveness-value">中等</span>
+                    </label>
+                    <input type="range" id="trend-aggressiveness" min="1" max="3" value="2" step="1">
+                    <div class="range-labels">
+                        <span>保守</span>
+                        <span>中等</span>
+                        <span>激進</span>
+                    </div>
+                    <p class="hint">調整對趨勢的反應靈敏度</p>
+                </div>
+            </div>
+        </div>
+
         <div id="results-area" class="results-container hidden">
             <div class="card glass-panel result-card">
                 <h2>🎯 推薦號碼</h2>
